@@ -13,7 +13,12 @@ entity joypad is
       ce                   : in  std_logic;
       reset                : in  std_logic;
       
-      analogPad            : in  std_logic;
+      PadPortEnable1       : in  std_logic;
+      PadPortAnalog1       : in  std_logic;
+      PadPortMouse1        : in  std_logic;
+      PadPortEnable2       : in  std_logic;
+      PadPortAnalog2       : in  std_logic;
+      PadPortMouse2        : in  std_logic;
       
       memcard1_available   : in  std_logic;
       memcard2_available   : in  std_logic;
@@ -46,6 +51,11 @@ entity joypad is
       Analog1YP2           : in  signed(7 downto 0);
       Analog2XP2           : in  signed(7 downto 0);
       Analog2YP2           : in  signed(7 downto 0);   
+      MouseEvent           : in  std_logic;
+      MouseLeft            : in  std_logic;
+      MouseRight           : in  std_logic;
+      MouseX               : in  signed(8 downto 0);
+      MouseY               : in  signed(8 downto 0);
 
       mem1_request         : out std_logic;
       mem1_BURSTCNT        : out std_logic_vector(7 downto 0) := (others => '0'); 
@@ -349,7 +359,9 @@ begin
       ce                   => ce,       
       reset                => reset,    
        
-      analogPad            => analogPad,
+      PortEnabled          => PadPortEnable1,
+      analogPad            => PadPortAnalog1,
+      isMouse              => PadPortMouse1,
 
       selected             => selectedPad1,
       actionNext           => actionNextPad,
@@ -384,7 +396,12 @@ begin
       Analog1X             => Analog1XP1,   
       Analog1Y             => Analog1YP1,   
       Analog2X             => Analog2XP1,   
-      Analog2Y             => Analog2YP1
+      Analog2Y             => Analog2YP1,
+      MouseEvent           => MouseEvent,
+      MouseLeft            => MouseLeft,
+      MouseRight           => MouseRight,
+      MouseX               => MouseX,
+      MouseY               => MouseY
    );
    
    ijoypad_pad2 : entity work.joypad_pad
@@ -394,7 +411,9 @@ begin
       ce                   => ce,       
       reset                => reset,    
        
-      analogPad            => analogPad,
+      PortEnabled          => PadPortEnable2,
+      analogPad            => PadPortAnalog2,
+      isMouse              => PadPortMouse2,
 
       selected             => selectedPad2,
       actionNext           => actionNextPad,
@@ -429,7 +448,12 @@ begin
       Analog1X             => Analog1XP2,   
       Analog1Y             => Analog1YP2,   
       Analog2X             => Analog2XP2,   
-      Analog2Y             => Analog2YP2
+      Analog2Y             => Analog2YP2,
+      MouseEvent           => MouseEvent,
+      MouseLeft            => MouseLeft,
+      MouseRight           => MouseRight,
+      MouseX               => MouseX,
+      MouseY               => MouseY
    );
    
    ijoypad_mem1 : entity work.joypad_mem
