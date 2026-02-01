@@ -139,6 +139,7 @@ architecture arch of cpu is
    signal stall                        : unsigned(4 downto 0) := (others => '0');
                      
    signal exception                    : unsigned(4 downto 0) := (others => '0');
+   signal exceptionBreakpoint          : std_logic;
                
    signal exceptionNew1                : std_logic := '0';
    signal exceptionNew3                : std_logic := '0';
@@ -342,6 +343,7 @@ architecture arch of cpu is
    signal EXEgte_cmdData               : unsigned(31 downto 0);
    signal EXEgte_cmdEna                : std_logic := '0'; 
    signal EXElastreadCOP               : std_logic := '0'; 
+   signal EXEBreakpoint                : std_logic := '0';
    
    --MULT/DIV
    type CPU_HILOCALC is
@@ -634,7 +636,8 @@ begin
       );
    end generate; 
    
-   FetchAddr       <= x"BFC00180" when (exception > 0 and cop0_SR(22) = '1') else
+   FetchAddr       <= x"80000040" when (exceptionBreakpoint = '1') else
+                      x"BFC00180" when (exception > 0 and cop0_SR(22) = '1') else
                       x"80000080" when (exception > 0 and cop0_SR(22) = '0') else
                       PCbranch when branch = '1' else
                       PC;
@@ -1093,10 +1096,12 @@ begin
       end if;
       
    end process;
+   
+   EXEBreakpoint <= '1' when ((cop0_DCIC(31 downto 29) = "111" and cop0_DCIC(24 downto 23) = "11") and (((pcOld1 xor cop0_BPC) and cop0_BPCM) = x"00000000")) else '0';
 
    process (decodeImmData, decodeTarget, decodeJumpTarget, decodeSource1, decodeSource2, decodeValue1, decodeValue2, decodeOP, decodeFunct, decodeShamt, decodeRD, exception, stall3, stall, value1, value2, pcOld0, resultData, executeStalltype,
             cop0_BPC, cop0_BDA, cop0_JUMPDEST, cop0_DCIC, cop0_BADVADDR, cop0_BDAM, cop0_BPCM, cop0_SR, cop0_CAUSE, cop0_EPC, cop0_PRID, PC, hi, lo, hiloWait, 
-            opcode1, gte_readAddr, decode_gte_readAddr, gte_readData, gte_busy, execute_gte_cmdEna, ce, execute_gte_readAddr)
+            opcode1, gte_readAddr, decode_gte_readAddr, gte_readData, gte_busy, execute_gte_cmdEna, ce, execute_gte_readAddr, EXEBreakpoint)
       variable calcResult   : unsigned(31 downto 0);
       variable calcMemAddr  : unsigned(31 downto 0);
       variable executeShamt : unsigned(4 downto 0) := (others => '0');
@@ -1170,8 +1175,13 @@ begin
       if (decodeFunct(0) = '1') then
          shiftValue(32) := value2(31); 
       end if;
+      
+      if (EXEBreakpoint = '1') then
 
-      if (exception(4 downto 2) = 0 and stall = 0) then
+         exceptionNew3   <= '1';
+         exceptionCode_3 <= x"9";
+
+      elsif (exception(4 downto 2) = 0 and stall = 0) then
              
          case (to_integer(decodeOP)) is
          
@@ -2649,7 +2659,8 @@ begin
             
             if (stall = 0) then
          
-               exception <= exceptionNew;
+               exception           <= exceptionNew;
+               exceptionBreakpoint <= EXEBreakpoint;
                if (exceptionNew1 = '1') then    -- PC out of bounds
                   exceptionCode     <= x"6";
                   exceptionInstr    <= opcode2(27 downto 26);
