@@ -716,23 +716,14 @@ begin
                end if;
             end if;
             
+            -- INT1 (Data Ready)
+            -- INT1 is always queued via pendingDriveIRQ to preserve hardware-like delay
+            -- and avoid INT1/INT3 race conditions (Burger Burger, Jikkyō '95),
+            -- while still guaranteeing delivery (Crime Crackers, Parodius).            
             if (ackRead = '1' or ackRead_data = '1') then            
-               if (CDROM_IRQFLAG = "00011") then
-                  -- INT3 active: do not overwrite it with INT1
-                  -- queue INT1 for later delivery
-                  if (pendingDriveIRQ = "00000") then
-                     pendingDriveIRQ      <= "00001";
-                     pendingDriveResponse <= internalStatus;
-                  end if;            
-               else
-                  if (CDROM_IRQFLAG /= "00000" and CDROM_IRQFLAG /= "00001") then
-                     pendingDriveIRQ <= CDROM_IRQFLAG;
-                  end if;           
-                  CDROM_IRQFLAG <= "00001";
-                  if (CDROM_IRQENA(0) = '1') then
-                     irqOut <= '1';
-                  end if;
-                  ackRead_valid <= '1';
+               if (pendingDriveIRQ /= "00001") then
+                  pendingDriveIRQ      <= "00001";
+                  pendingDriveResponse <= internalStatus;
                end if;            
             end if;
             
@@ -1097,35 +1088,58 @@ begin
                         cmdStop     <= '1';
                         
                      when x"09" => -- pause
-						-- Reject PAUSE while still seeking (first sector not delivered)
-						if (driveState = DRIVE_SEEKLOGICAL or driveState = DRIVE_SEEKPHYSICAL or ((driveState = DRIVE_READING or driveState = DRIVE_PLAYING) and internalStatus(6) = '1')) then	  
-                           -- Return NOT_READY (0x80)
-						   cmdPending              <= '0';
-						   errorResponseCmd_new    <= '1';	
-						   errorResponseCmd_error  <= x"01"; -- STAT_ERROR
-                           errorResponseCmd_reason <= x"80"; -- NOT_READY
-                        else
-						   cmdAck      <= '1';
-                           cmdPending  <= '0';
+                     
+                        -- CASE 1: PAUSE during SEEK (Parasite Eve II expects this to be accepted)
+                        if (driveState = DRIVE_SEEKLOGICAL or
+                            driveState = DRIVE_SEEKPHYSICAL or
+                            driveState = DRIVE_SEEKIMPLICIT) then
+                     
+                           cmdAck     <= '1';
+                           cmdPending <= '0';
+                     
                            working     <= '1';
                            workDelay   <= 7000 - 2;
                            workCommand <= nextCmd;
                            cmdResetXa  <= '1';
+                     
+                           -- cancel read/play after seek
+                           stop_afterseek <= '1';
+                     
+                        -- CASE 2: PAUSE during READ/PLAY but first sector NOT delivered yet
+                        -- (Duke Nukem / MiruMiru)
+                        elsif ((driveState = DRIVE_READING or driveState = DRIVE_PLAYING) and
+                               internalStatus(6) = '1') then
+                     
+                           -- Reject PAUSE: NOT_READY
+                           cmdPending              <= '0';
+                           errorResponseCmd_new    <= '1';
+                           errorResponseCmd_error  <= x"01"; -- STAT_ERROR
+                           errorResponseCmd_reason <= x"80"; -- NOT_READY
+                     
+                        -- CASE 3: Normal PAUSE
+                        else
+                     
+                           cmdAck     <= '1';
+                           cmdPending <= '0';
+                     
+                           working     <= '1';
+                           workDelay   <= 7000 - 2;
+                           workCommand <= nextCmd;
+                           cmdResetXa  <= '1';
+                     
                            if (driveState = DRIVE_READING or driveState = DRIVE_PLAYING) then
-                              -- Matches psx spx doc and DuckStation
-                              if (modeReg(7) = '1') then
-                                 workDelay  <= 1066874 + driveDelay; -- value from psx spx doc
-                              else
+                              -- todo: should this be swapped between single speed and double speed? DuckStation has double speed longer and psx spx doc has single speed being longer
+                              -- attempting to change these values may cause problems in some sensitive games 
+							   if (modeReg(7) = '1') then
                                  workDelay  <= 2157295 + driveDelay; -- value from psx spx doc
+                              else
+                                 workDelay  <= 1066874 + driveDelay; -- value from psx spx doc
                               end if;
                            end if;
-                           if (driveState = DRIVE_SEEKLOGICAL or driveState = DRIVE_SEEKPHYSICAL or driveState = DRIVE_SEEKIMPLICIT) then
-                              -- todo: complete seek?
-                              stop_afterseek <= '1';
-                           else
-                              drive_stop <= '1';
-                           end if;
-					    end if;
+                     
+                           drive_stop <= '1';
+                     
+                        end if;
                      
                      when x"0A" => -- reset
                         if (working = '1' and workCommand = x"0A") then
@@ -2827,24 +2841,28 @@ begin
 
             case (copyState) is
             
-               when COPY_IDLE =>
-                  if (copyData = '1' and ce = '1' and
-                     sectorBufferSizes(to_integer(readSectorPointer)) /= 0) then
-
-                     copyState         <= COPY_FIRST;
-                     copyCount         <= 0;
-                     copyReadAddr      <= 0;
-                     copyByteCnt       <= 0;
-                     copySectorPointer <= readSectorPointer;
-                  -- read size before clearing buffer size
-                  if (sectorBufferSizes(to_integer(readSectorPointer)) = 0) then
-                     copySize <= RAW_SECTOR_OUTPUT_SIZE / 4;
-                  else
-                     copySize <= sectorBufferSizes(to_integer(readSectorPointer));
-                  end if;
-                  -- clear buffer size after size was latched
-                     sectorBufferSizes(to_integer(readSectorPointer)) <= 0;
-               end if;
+                when COPY_IDLE =>
+                   if (copyData = '1' and ce = '1') then
+                
+                      copySectorPointer <= readSectorPointer;
+                      copyCount         <= 0;
+                      copyReadAddr      <= 0;
+                      copyByteCnt       <= 0;
+                
+                      if (sectorBufferSizes(to_integer(readSectorPointer)) /= 0) then
+                         -- buffered sector ready
+                         copySize <= sectorBufferSizes(to_integer(readSectorPointer));
+                         sectorBufferSizes(to_integer(readSectorPointer)) <= 0;
+                         copyState <= COPY_FIRST;                
+                      else
+                         -- buffer empty → allow RAW only
+                         if (modeReg(5) = '1') then
+                            copySize  <= RAW_SECTOR_OUTPUT_SIZE / 4;
+                            copyState <= COPY_FIRST;
+                         end if;
+                         -- otherwise stay in COPY_IDLE (no DMA)
+                      end if;
+                   end if;
                
                when COPY_FIRST =>
                   copyState     <= COPY_DATA;
