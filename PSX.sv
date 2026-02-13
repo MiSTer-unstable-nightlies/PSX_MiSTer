@@ -345,7 +345,7 @@ wire reset_or = RESET | buttons[1] | status[0] | bios_download | exe_download | 
 // 0         1         2         3          4         5         6          7         8         9
 // 01234567890123456789012345678901 23456789012345678901234567890123 45678901234567890123456789012345
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-//  XXXX XXXXXX XXXXXX XXXXX  XX XX XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+//  XXXX XXXXXX XXXXXX XXXXX  XX XX XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 `include "build_id.v"
 parameter CONF_STR = {
@@ -423,7 +423,6 @@ parameter CONF_STR = {
 	"P2O[21],CD Fast Seek,Off,On(U);",
 	"P2O[77:75],CD Speed,Original,Forced 1X(U),Forced 2X(U),Hack 4X(U),Hack 6X(U),Hack 8X(U);",
 	"P2O[78],Limit Max CD Speed,Off,On(U);",
-    "P2O[93],Backward Seek Hack,Off,On(U);",
 	"P2O[85],RAM(Homebrew),2 MByte,8 MByte(U);",
 	"P2O[90],GPU Slowdown,Off,On(U);",
 	"P2O[92],Old GPU(CXD8514Q),Off,On;",
@@ -1109,9 +1108,7 @@ psx
    .REVERBOFF(0),
    .REPRODUCIBLESPUDMA(status[43]),
    .WIDESCREEN(status[54:53]),
-   .oldGPU(status[92]),
-   .backwardSeekHack(status[93]),
-   
+   .oldGPU(status[92]),   
    // RAM/BIOS interface
    .biosregion(biosregion),
    .ram_refresh(sdr_refresh),

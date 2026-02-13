@@ -108,11 +108,6 @@ The higher speed rates are more unstable and require proper storage to be usable
 Will hold back any new CD data until the game has processed the last data. 
 Mostly useful to prevent CD data overrun when using higher speed modes, leading to overall faster loading times due to less read retries.
 
-- Backward Seek Hack:
-Fixes long stutters in Dave Mirra and Thrasher games related to backward CD seeks.
-The drive continues reading normally, while sectors ahead of the seek target are temporarily hidden from the CPU until the correct position is reached.
-Generally safe, but may affect a small number of sensitive titles (e.g. some Army Men games).
-
 - RAM:
 8 Mbyte option from development consoles. Only use for homebrew that requires it, otherwise there is a high chance of crashing games.
 

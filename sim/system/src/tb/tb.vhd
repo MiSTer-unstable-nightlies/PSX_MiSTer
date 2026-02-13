@@ -306,7 +306,6 @@ begin
       enableNeGconRumble    => '0',
       drawSlow              => '0',
       oldGPU                => '0',
-      backwardSeekHack      => '0',
       PadPortPopn1          => '0',
       PadPortPopn2          => '0',
       snacMC                => '0',
