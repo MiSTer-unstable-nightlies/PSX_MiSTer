@@ -941,7 +941,7 @@ always @(posedge clk_1x) begin
       if (!padMode[1]) psx_info <= 8'd18;
    end else if (cdinfo_download_1 && ~cdinfo_download) begin
       // warning for every unsafe option
-      if (status[89] || status[80:79] > 0 || status[72] || status[15] || status[21] || status[77:75] > 0 || status[78] || status[85] || status[93]) begin
+      if (status[89] || status[80:79] > 0 || status[72] || status[15] || status[21] || status[77:75] > 0 || status[78] || status[85]) begin
          psx_info_req <= 1;
          psx_info     <= 8'd24;
       end else if (status[40:39] == 2'b00) begin
