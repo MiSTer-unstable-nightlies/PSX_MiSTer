@@ -15,7 +15,7 @@ SDRAM of any size is required.
 * Texture Filtering
 * 24 Bit rendering
 * Widescreen modes
-* Screen roation by 180°
+* Screen rotation by 180°
 * 8 Mbyte mode(from dev units, mostly for homebrew) 
 * Inputs: DualShock, Digital, Analog, Mouse, NeGcon, Wheel, Justifier and Guncon support.
 * Native Input support through SNAC
