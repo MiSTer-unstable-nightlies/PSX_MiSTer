@@ -400,8 +400,6 @@ architecture arch of cd_top is
    signal copyByteCnt               : integer range 0 to 3;
    signal copySize                  : integer range 0 to 588;    
    signal copyReadAddr              : integer range 0 to 588;
-
-   signal copyStart                 : std_logic := '1';
    
    signal copySectorPointer         : unsigned(2 downto 0) := (others => '0');
    signal ackRead_data              : std_logic := '0';
@@ -2509,7 +2507,6 @@ begin
                      fetchCount        <= 0;
                      fetchDelay        <= 15;
                      readOnDisk_buffer <= '0';
-					 copyStart         <= '1';
                   end if;
                   
                when SFETCH_DELAY => -- delay to give processing a head start with copy and wait for HPS ack before new request
@@ -2833,26 +2830,22 @@ begin
                   CDDA_data  <= sectorBuffer_DataB;
                   
             end case;
-            
 
+															
             case (copyState) is
             
                when COPY_IDLE =>
                   if (copyData = '1' and ce = '1') then
-                     copySectorPointer <= readSectorPointer;
+                     copyState         <= COPY_FIRST;
                      copyCount         <= 0;
                      copyReadAddr      <= 0;
                      copyByteCnt       <= 0;
-                     if (sectorBufferSizes(to_integer(readSectorPointer)) /= 0) then
-                        copySize <= sectorBufferSizes(to_integer(readSectorPointer));
-                        sectorBufferSizes(to_integer(readSectorPointer)) <= 0;
-                        copyState <= COPY_FIRST;
-                        copyStart <= '0';
-                     elsif (copyStart = '1') then
-                        null;
+                     copySectorPointer <= readSectorPointer;
+                     sectorBufferSizes(to_integer(readSectorPointer)) <= 0;
+                     if (sectorBufferSizes(to_integer(readSectorPointer)) = 0) then
+                        copySize <= RAW_SECTOR_OUTPUT_SIZE / 4;
                      else
-                        copySize  <= RAW_SECTOR_OUTPUT_SIZE / 4;
-                        copyState <= COPY_FIRST;
+                        copySize <= sectorBufferSizes(to_integer(readSectorPointer));
                      end if;
                   end if;
                
