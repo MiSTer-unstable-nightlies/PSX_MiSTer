@@ -46,6 +46,12 @@ One card can be mounted for each controller slot. Cards are in raw .mcd format. 
 
 You need to save them either manually in the OSD or turn on autosave. Saving or loading a card will pause the core for a short time.
 
+## CUE+BIN and CHD files
+
+For proper operation, CUE/BIN and CHD game files should be placed in separate folders, with one folder per game. This allows the core to automatically create a dedicated virtual memory card for each game, preventing save data from being shared between different titles.
+
+Additionally, when a new game is selected, the core automatically resets itself, ensuring the game starts correctly without requiring a manual restart.
+
 ## Multiple Disc Games
 
 To swap discs while the game is running, all disc files for the game must be placed in the same folder. When a disc change is required, the core will automatically simulate opening and closing the disc lid. Example folder structure of a multi-disc game:
