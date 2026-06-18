@@ -1870,7 +1870,10 @@ begin
 		bitCnt <= bitCnt + 1'b1;
 		if(bitCnt == 4'd7) begin//check for ack
 			oneTime <= 1'b1;
-			if (MCtransfer && byteCnt == 4'd7) ackTimer <= 16'd60000;//very late ack after 7th byte. around 56000 cycles (1.7ms) with a sony MC. 3rd party MCs don't seem to do this
+			if (MCtransfer && bytesLeft != 9'd0 && byteCnt == 4'd7)
+			    ackTimer <= 16'd60000;//very late ack after 7th byte. around 56000 cycles (1.7ms) with a sony MC. 3rd party MCs don't seem to do this
+			else if (MCtransfer) 
+			    ackTimer <= 16'd1800;
 			else begin
 				if (byteCnt == bytesLeft + 3) ackTimer <= 16'd400;//only wait around 150 on last byte
 				else ackTimer <= 16'd1800;//1st byte of multitap(1375) cycles to ack,digital(460),analog(350-400),ds2(250-400),mouse(120),guncon(270)

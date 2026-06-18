@@ -1164,7 +1164,9 @@ begin
                            cmdAck      <= '1';
                            softReset   <= '1';
                            working     <= '1';
-                           workDelay   <= workDelay + 399999; -- cannot ignore old workdelay, otherwise reset after pause is too fast(e.g. GTA PAL)
+						   -- cannot ignore old workdelay, otherwise reset after pause is too fast(e.g. GTA PAL)
+						   -- increased 399999->3999999 (~12ms->~118ms, = DuckStation INIT_TICKS) to fix Virtual Pool 3 and the logo intro in Disruptor
+                           workDelay   <= workDelay + 3999999;
                            workCommand <= nextCmd;
                            -- call here second time, so response has new values after reset?
                            cmd_delay   <= 24999 - 2;

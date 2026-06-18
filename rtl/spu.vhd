@@ -457,6 +457,22 @@ architecture arch of spu is
    
    signal reverbLastLeft         : signed(15 downto 0);
    signal reverbLastRight        : signed(15 downto 0);
+
+   signal reverbL_d1             : signed(15 downto 0) := (others => '0');
+   signal reverbL_d2             : signed(15 downto 0) := (others => '0');
+   signal reverbL_d3             : signed(15 downto 0) := (others => '0');
+   signal reverbL_d4             : signed(15 downto 0) := (others => '0');
+   signal reverbR_d1             : signed(15 downto 0) := (others => '0');
+   signal reverbR_d2             : signed(15 downto 0) := (others => '0');
+   signal reverbR_d3             : signed(15 downto 0) := (others => '0');
+   signal reverbR_d4             : signed(15 downto 0) := (others => '0');
+   signal reverbDownLeft         : signed(15 downto 0) := (others => '0');
+   signal reverbDownRight        : signed(15 downto 0) := (others => '0');
+
+   signal reverbPartA_L          : signed(24 downto 0) := (others => '0');
+   signal reverbPartB_L          : signed(24 downto 0) := (others => '0');
+   signal reverbPartA_R          : signed(24 downto 0) := (others => '0');
+   signal reverbPartB_R          : signed(24 downto 0) := (others => '0');
    
    -- noise
    signal noiseLevel             : unsigned(15 downto 0);
@@ -865,6 +881,20 @@ begin
             
             reverbLastLeft       <= (others => '0');
             reverbLastRight      <= (others => '0');
+            reverbL_d1           <= (others => '0');
+            reverbL_d2           <= (others => '0');
+            reverbL_d3           <= (others => '0');
+            reverbL_d4           <= (others => '0');
+            reverbR_d1           <= (others => '0');
+            reverbR_d2           <= (others => '0');
+            reverbR_d3           <= (others => '0');
+            reverbR_d4           <= (others => '0');
+            reverbDownLeft       <= (others => '0');
+            reverbDownRight      <= (others => '0');
+            reverbPartA_L        <= (others => '0');
+            reverbPartB_L        <= (others => '0');
+            reverbPartA_R        <= (others => '0');
+            reverbPartB_R        <= (others => '0');
             
             cd_next_left         <= (others => '0');
             cd_next_right        <= (others => '0');
@@ -1898,6 +1928,27 @@ begin
                when RAM_WAIT =>
                   if (voiceCounter >= 23 or useSDRAM = '0') then
                      if (index = 23) then
+                        reverbDownLeft  <= clamp16(shift_right(reverbPartA_L + reverbPartB_L, 4));
+                        reverbDownRight <= clamp16(shift_right(reverbPartA_R + reverbPartB_R, 4));
+                        reverbPartA_L <= resize(clamp16(reverbsumleft), 25)
+                                         + shift_left(resize(reverbL_d1, 25), 2);
+                        reverbPartB_L <= shift_left(resize(reverbL_d2, 25), 2) + shift_left(resize(reverbL_d2, 25), 1)
+                                         + shift_left(resize(reverbL_d3, 25), 2)
+                                         + resize(reverbL_d4, 25);
+                        reverbPartA_R <= resize(clamp16(reverbsumright), 25)
+                                         + shift_left(resize(reverbR_d1, 25), 2);
+                        reverbPartB_R <= shift_left(resize(reverbR_d2, 25), 2) + shift_left(resize(reverbR_d2, 25), 1)
+                                         + shift_left(resize(reverbR_d3, 25), 2)
+                                         + resize(reverbR_d4, 25);
+                        reverbL_d4 <= reverbL_d3;
+                        reverbL_d3 <= reverbL_d2;
+                        reverbL_d2 <= reverbL_d1;
+                        reverbL_d1 <= clamp16(reverbsumleft);
+                        reverbR_d4 <= reverbR_d3;
+                        reverbR_d3 <= reverbR_d2;
+                        reverbR_d2 <= reverbR_d1;
+                        reverbR_d1 <= clamp16(reverbsumright);
+
                         if (cnt(7) = '1' and REVERBOFF = '0') then
                            ram_ReverbIndex <= 0;
                            state           <= REVERB_READ1;
@@ -2401,7 +2452,8 @@ begin
    REVERB_mAPF1  <= unsigned(REVERB_mLAPF1 ) when (reverbRight = '0') else unsigned(REVERB_mRAPF1 );
    REVERB_mAPF2  <= unsigned(REVERB_mLAPF2 ) when (reverbRight = '0') else unsigned(REVERB_mRAPF2 );
    REVERB_vIN    <=   signed(REVERB_vLIN   ) when (reverbRight = '0') else   signed(REVERB_vRIN   );
-   reverb_sample <= reverbsumleft            when (reverbRight = '0') else reverbsumright;
+   -- Feed the reverb core from the lightweight 5-tap low-pass output.
+   reverb_sample <= resize(reverbDownLeft, 24) when (reverbRight = '0') else resize(reverbDownRight, 24);
    
    apf1neg <= x"7FFF" when (REVERB_vAPF1 = x"8000") else (to_signed(0, 16) - signed(REVERB_vAPF1));
    apf2neg <= x"7FFF" when (REVERB_vAPF2 = x"8000") else (to_signed(0, 16) - signed(REVERB_vAPF2));
