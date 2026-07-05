@@ -1092,65 +1092,34 @@ begin
                         cmdStop     <= '1';
                         
                      when x"09" => -- pause
-                     
-                        -- CASE 1: PAUSE during SEEK (Parasite Eve II expects this to be accepted)
-                        if (driveState = DRIVE_SEEKLOGICAL or
-                            driveState = DRIVE_SEEKPHYSICAL or
-                            driveState = DRIVE_SEEKIMPLICIT) then
-                     
-                           cmdAck     <= '1';
-                           cmdPending <= '0';
-                     
-                           working     <= '1';
-                           workDelay   <= 7000 - 2;
-                           workCommand <= nextCmd;
-                           cmdResetXa  <= '1';
-                     
-                           if (readAfterSeek = '1') then
-                              -- cancel pending read after seek - Parasite Eve II
-                              stop_afterseek <= '1';
-                              -- abort active seek operation - Vigilante 8
-                              drive_stop <= '1';
-                           elsif (playAfterSeek = '1') then
-                              -- keep pending play-after-seek alive for CDDA startup
-                              null;
-                           end if;
-                     
-                        -- CASE 2: PAUSE during READ/PLAY but first sector NOT delivered yet
-                        -- (Duke Nukem / MiruMiru)
-                        elsif ((driveState = DRIVE_READING or driveState = DRIVE_PLAYING) and
-                               internalStatus(6) = '1') then
-                     
-                           -- Reject PAUSE: NOT_READY
+                        -- Reject pause while seeking (SeekL/SeekP) or while reading/playing before the first sector has been processed (verified on real hardware).
+                        if (driveState = DRIVE_SEEKLOGICAL or driveState = DRIVE_SEEKPHYSICAL or
+                            ((driveState = DRIVE_READING or driveState = DRIVE_PLAYING) and internalStatus(6) = '1')) then
                            cmdPending              <= '0';
                            errorResponseCmd_new    <= '1';
                            errorResponseCmd_error  <= x"01"; -- STAT_ERROR
                            errorResponseCmd_reason <= x"80"; -- NOT_READY
-                     
-                        -- CASE 3: Normal PAUSE
+                           if (readAfterSeek = '1') then
+                              stop_afterseek <= '1';
+                           end if;
                         else
-                     
                            cmdAck     <= '1';
                            cmdPending <= '0';
-                     
                            working     <= '1';
                            workDelay   <= 7000 - 2;
                            workCommand <= nextCmd;
                            cmdResetXa  <= '1';
-                     
                            if (driveState = DRIVE_READING or driveState = DRIVE_PLAYING) then
                               -- todo: should this be swapped between single speed and double speed? DuckStation has double speed longer and psx spx doc has single speed being longer
                               -- attempting to change these values may cause problems in some sensitive games 
-							   if (modeReg(7) = '1') then
+                              if (modeReg(7) = '1') then
                                  workDelay  <= 2157295 + driveDelay; -- value from psx spx doc
                               else
                                  workDelay  <= 1066874 + driveDelay; -- value from psx spx doc
                               end if;
                            end if;
-                     
-                           drive_stop <= '1';
-                     
-                        end if;
+                              drive_stop <= '1';
+                           end if;
                      
                      when x"0A" => -- reset
                         if (working = '1' and workCommand = x"0A") then
