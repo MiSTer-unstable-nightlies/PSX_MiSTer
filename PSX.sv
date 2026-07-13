@@ -1836,8 +1836,9 @@ begin
 	oldselectedPort2 <= selectedPort2Snac;
 
 	if ((~oldselectedPort1 && selectedPort1Snac) || (~oldselectedPort2 && selectedPort2Snac)) begin
-		byteCnt   <= 9'd0;
-		bytesLeft <= 9'd0;
+		byteCnt    <= 9'd0;
+		bytesLeft  <= 9'd0;
+		MCtransfer <= 1'b0;
 	end
 
 	if (beginTransferSnac) begin
